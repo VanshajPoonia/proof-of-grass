@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Proof of Grass</title>
+  <meta name="description" content="A daily outdoor bingo card that only a real photo can fill. The judge is a vision model running on your phone, so your photos never leave it.">
+  <meta name="theme-color" content="#f3eee1" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#121710" media="(prefers-color-scheme: dark)">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌱</text></svg>">
+  <link rel="stylesheet" href="assets/styles.css">
+  <script type="module" src="src/app.js"></script>
+</head>
+<body>
+  <main>
+    <header>
+      <p class="kicker">Proof of Grass</p>
+      <h1 id="date">Today</h1>
+      <p class="lede">Nine things are outside today. Your phone will believe you when it sees them.</p>
+      <p id="streak" class="streak"></p>
+    </header>
+
+    <section id="card" class="card" aria-label="Today's bingo card"></section>
+    <p id="tally" class="tally" aria-live="polite"></p>
+
+    <div class="actions">
+      <button id="share" class="primary" disabled>Share card</button>
+      <button id="swap">Swap one square</button>
+    </div>
+
+    <section id="model" class="model" hidden>
+      <p><strong>The judge lives on your phone.</strong> It is a vision model (CLIP, open weights) that checks each photo right here, so nothing is uploaded. It is an <span id="mb">89 MB</span> download, once. After that the card works with no signal.</p>
+      <button class="primary">Download the judge</button>
+      <progress max="1" value="0" hidden></progress>
+      <p class="load-label small"></p>
+    </section>
+
+    <footer>
+      <p>Photos never leave this phone. There is no server to send them to: open your browser's network tab and take a picture.</p>
+      <p>Same card for everyone, every day. New one at midnight. <a href="https://github.com/VanshajPoonia/proof-of-grass">Source</a></p>
+    </footer>
+  </main>
+
+  <dialog id="sheet" aria-labelledby="sheet-title">
+    <div class="sheet-inner">
+      <button class="close" data-close aria-label="Close">×</button>
+      <span class="emoji big" aria-hidden="true"></span>
+      <h2 id="sheet-title"></h2>
+      <p class="hint"></p>
+
+      <img id="preview" alt="Your photo" hidden>
+      <p id="credit" class="credit small" hidden></p>
+
+      <div id="capture">
+        <label class="primary camera">
+          <input id="photo" type="file" accept="image/*" capture="environment">
+          📷 Take the photo
+        </label>
+        <p class="small">Judging this from a desk? Try a sample photo:
+          <button class="link" id="sample-real">the real thing</button> or
+          <button class="link" data-sample="laptop">a laptop on a sunny balcony</button>
+        </p>
+      </div>
+
+      <div id="verdict" class="verdict" hidden aria-live="polite">
+        <h3></h3>
+        <p></p>
+        <progress max="1" value="0" hidden></progress>
+        <p class="load-label small"></p>
+        <div id="bars" class="bars"></div>
+        <div class="actions">
+          <button id="retry" class="primary">Try another photo</button>
+          <button data-close>Back to the card</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status"></div>
+</body>
+</html>

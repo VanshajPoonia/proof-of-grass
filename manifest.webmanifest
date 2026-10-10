@@ -1,0 +1,10 @@
+{
+  "name": "Proof of Grass",
+  "short_name": "Grass",
+  "description": "A daily outdoor bingo card that only a real photo can fill.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f3eee1",
+  "theme_color": "#3d6a27",
+  "icons": [{ "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

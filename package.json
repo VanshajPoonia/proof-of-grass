@@ -1,0 +1,16 @@
+{
+  "name": "proof-of-grass",
+  "version": "1.0.0",
+  "description": "A daily outdoor bingo card that only a real photo can fill, judged by CLIP running on your phone",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "build": "node scripts/build-classes.mjs",
+    "test": "node tests/card.mjs && node tests/run.mjs"
+  },
+  "devDependencies": {
+    "@huggingface/transformers": "^4.3.1"
+  },
+  "license": "MIT"
+}
