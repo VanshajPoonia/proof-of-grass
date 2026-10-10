@@ -4,7 +4,7 @@ A daily outdoor bingo card that only a real photo can fill.
 
 Every morning there is a new 3×3 card: a fallen leaf, moss, a snail, a park bench, and grass in the middle, always. Tap a square, take a photo, and a vision model running **on your phone** decides whether you actually found it. Fill a line for a bingo. Share your grid. Same card for everyone, every day.
 
-**Live:** https://proof-of-grass.vercel.app
+**Live:** https://vanshajpoonia.github.io/proof-of-grass/
 
 - **No upload, ever.** The judge is [CLIP ViT-B/32](https://huggingface.co/Xenova/clip-vit-base-patch32) (open weights, MIT), running in the tab through [transformers.js](https://github.com/huggingface/transformers.js). Open the network tab and take a picture: there is no request.
 - **Works with no signal.** One 89 MB download, then the model, the app, and today's card all run in airplane mode.
