@@ -69,5 +69,5 @@ export function shareText(day, filled, url) {
   const rows = [0, 3, 6].map((r) => [r, r + 1, r + 2].map((i) => (filled.has(i) ? '🟩' : '⬜')).join(''));
   const lines = completedLines(filled).length;
   const tail = filled.size === 9 ? 'BLACKOUT' : lines ? `${lines} bingo${lines > 1 ? 's' : ''}` : `${filled.size}/9`;
-  return `Proof of Grass ${day}\n${rows.join('\n')}\n${tail}\n${url}`;
+  return `TouchGrass Bingo ${day}\n${rows.join('\n')}\n${tail}\n${url}`;
 }

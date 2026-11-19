@@ -1,6 +1,6 @@
 {
-  "name": "Proof of Grass",
-  "short_name": "Grass",
+  "name": "TouchGrass Bingo: Outdoor Photo Bingo",
+  "short_name": "TouchGrass",
   "description": "A daily outdoor bingo card that only a real photo can fill.",
   "start_url": "./",
   "display": "standalone",

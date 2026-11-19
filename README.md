@@ -1,4 +1,6 @@
-# Proof of Grass 🌱
+# TouchGrass Bingo 🌱
+
+**Outdoor Photo Bingo.** Formerly called Proof of Grass.
 
 A daily outdoor bingo card that only a real photo can fill.
 

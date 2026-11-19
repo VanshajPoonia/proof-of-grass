@@ -36,7 +36,7 @@ check('streak counts back from today, or from yesterday if today is not done yet
 check('streak survives a month boundary', () => assert.equal(streak({ '2026-09-30': 1, '2026-10-01': 1 }, '2026-10-01'), 2));
 check('share text is a grid', () => {
   const t = shareText('2026-10-10', new Set([0, 4, 8]), 'https://x');
-  assert.equal(t, 'Proof of Grass 2026-10-10\n🟩⬜⬜\n⬜🟩⬜\n⬜⬜🟩\n1 bingo\nhttps://x');
+  assert.equal(t, 'TouchGrass Bingo 2026-10-10\n🟩⬜⬜\n⬜🟩⬜\n⬜⬜🟩\n1 bingo\nhttps://x');
 });
 check('dayKey is local, zero-padded', () => assert.equal(dayKey(new Date(2026, 0, 5, 23, 59)), '2026-01-05'));
 
