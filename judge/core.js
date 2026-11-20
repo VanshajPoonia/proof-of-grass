@@ -48,7 +48,10 @@ export function rank(imageVec, classes, scale = 100) {
     .sort((a, b) => b.p - a.p);
 }
 
-export const DEFAULTS = { topK: 2, minP: 0.15 };
+export const DEFAULTS = { topK: 2, minP: 0.15, screenK: 2, screenP: 0.05 };
+
+// The indoor class "a computer screen" counts as a screen too, not only the 'screen' kind.
+const screenish = (r) => r.kind === 'screen' || r.id === 'screen';
 
 /**
  * Does this photo show the claim? `claim` is one class id, or a list of ids that would
@@ -59,15 +62,19 @@ export const DEFAULTS = { topK: 2, minP: 0.15 };
  * thing: a squirrel holding an acorn should be able to fill either square. The
  * `minP` floor stops the runner-up from sneaking in at 3%.
  *
- * An indoor class on top is a hard no ('elsewhere'), whatever the claim.
+ * Hard no, whatever the claim: an indoor class on top ('elsewhere'), or a screen class
+ * in the top `screenK` with at least `screenP` ('screen'). A photo of grass on a phone
+ * still ranks grass first, so the screen check cannot wait for a screen to come top.
  */
 export function judge(ranked, claim, options = {}) {
-  const { topK, minP } = { ...DEFAULTS, ...options };
+  const { topK, minP, screenK, screenP } = { ...DEFAULTS, ...options };
   const ids = new Set([claim].flat());
   const at = ranked.findIndex((r) => ids.has(r.id));
   const hit = ranked[at];
   const top = ranked[0];
   if (top.kind === 'elsewhere') return { ok: false, reason: 'elsewhere', top, hit };
+  const screen = ranked.slice(0, screenK).find((r) => screenish(r) && r.p >= screenP);
+  if (screen) return { ok: false, reason: 'screen', top, hit, screen };
   if (at >= 0 && at < topK && hit.p >= minP) return { ok: true, reason: 'match', top, hit };
   return { ok: false, reason: 'other-item', top, hit };
 }

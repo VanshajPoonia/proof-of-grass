@@ -23,3 +23,19 @@ export const ELSEWHERE = [
   { id: 'houseplant', names: ['a houseplant in a pot', 'a potted plant indoors'] },
   { id: 'paper', names: ['a document', 'a page of text', 'a book'] },
 ].map((c) => ({ ...c, kind: 'elsewhere' }));
+
+// A photo of a screen showing the real thing. Grass on a phone still ranks as grass, so
+// this class only has to come close (core.js, the screen check), not win. Measured on
+// real device photos with the test photos pasted onto their screens (judge/frames.json).
+export const SCREEN = [
+  {
+    id: 'screen-photo',
+    kind: 'screen',
+    names: [
+      'a computer monitor showing a photo', 'a phone screen showing a photo', 'a laptop screen showing a picture',
+      'a television showing a picture', 'a tablet showing a photo', 'a digital photo frame',
+      'a photo of a screen with a black border', 'a picture displayed on a screen', 'a photo of a photo on a screen',
+      'a screen showing a nature photo', 'a phone showing a picture of nature', 'a monitor showing a landscape wallpaper',
+    ],
+  },
+];

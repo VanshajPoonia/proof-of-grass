@@ -1,6 +1,6 @@
 import { ITEMS, CENTER } from './items.js';
 import { cardFor, completedLines, dayKey, shareText, streak } from './card.js';
-import { ELSEWHERE } from '../judge/vocab.js';
+import { ELSEWHERE, SCREEN } from '../judge/vocab.js';
 import { createJudge } from '../judge/browser.js';
 
 const clip = createJudge({ vocabulary: 'data/classes.json' });
@@ -119,7 +119,7 @@ const ELSEWHERE_COPY = {
   houseplant: 'A houseplant is grass in witness protection. Try outside.',
   paper: 'That used to be a tree. It does not count any more.',
 };
-const nameOf = (r) => byId[r.id]?.label ?? ELSEWHERE.find((e) => e.id === r.id).names[0];
+const nameOf = (r) => byId[r.id]?.label ?? [...ELSEWHERE, ...SCREEN].find((e) => e.id === r.id).names[0];
 
 let current = null; // index of the square the sheet is about
 
@@ -212,6 +212,9 @@ function showVerdict(v, top3, claimed) {
   } else if (v.reason === 'elsewhere') {
     el.querySelector('h3').textContent = 'Not quite.';
     el.querySelector('p').textContent = ELSEWHERE_COPY[v.top.id];
+  } else if (v.reason === 'screen') {
+    el.querySelector('h3').textContent = 'Nice try.';
+    el.querySelector('p').textContent = 'That is a photo of a screen. The real one is outside.';
   } else {
     el.querySelector('h3').textContent = 'Not quite.';
     el.querySelector('p').textContent = `That reads as ${nameOf(v.top).toLowerCase()} to me. If the ${byId[claimed].label.toLowerCase().replace(/^an? /, '')} is in there, get closer so it fills the frame.`;

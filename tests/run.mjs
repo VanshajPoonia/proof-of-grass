@@ -1,44 +1,66 @@
-// Runs the real judge against the real model on 131 labelled photos from Wikimedia
-// Commons, and reproduces every number in the README. No mocks.
+// Runs the real judge against the real model on labelled photos from Wikimedia Commons,
+// and reproduces every number in the README. No mocks.
 //
 //   npm test                                      the shipped configuration + the comparisons
 //   MODEL=Xenova/clip-vit-base-patch16 npm test   the same, on a bigger model
 //
-// Photos are downloaded on first run into tests/.cache (credits in tests/fixtures.json).
+// Photos are downloaded on first run into tests/.cache. Credits are in tests/fixtures.json
+// (131 labelled photos), tests/screens.json (58 photos of screens) and judge/frames.json
+// (12 device photos the outdoor photos get pasted onto).
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { ITEMS } from '../src/items.js';
 import { ELSEWHERE, TEMPLATES } from '../judge/vocab.js';
 import { rank, judge, DEFAULTS } from '../judge/core.js';
-import { embedImage, buildClasses } from '../judge/node.mjs';
+import { embedImage, buildClasses, onScreen, RawImage } from '../judge/node.mjs';
 import { buildBingo, MODEL } from '../scripts/build-classes.mjs';
 
 const here = (p) => new URL(p, import.meta.url);
-const FIXTURES = JSON.parse(readFileSync(here('./fixtures.json')));
+const json = (p) => JSON.parse(readFileSync(here(p)));
+const FIXTURES = json('./fixtures.json');
+const SCREENS = json('./screens.json');
+const FRAMES = json('../judge/frames.json');
 const slug = MODEL.replace(/\W+/g, '_');
 mkdirSync(here('./.cache/img/'), { recursive: true });
 
 // ---- photos -> embeddings (cached) -------------------------------------------------
 const cacheFile = here(`./.cache/${slug}.json`);
 const cache = existsSync(cacheFile) ? JSON.parse(readFileSync(cacheFile)) : {};
-for (const f of FIXTURES) {
-  if (cache[f.title]) continue;
+
+async function download(f) {
   const local = here(`./.cache/img/${f.title.replace(/\W+/g, '_')}.jpg`);
   if (!existsSync(local)) {
     const res = await fetch(f.url, { headers: { 'User-Agent': 'proof-of-grass-tests/1.0 (github.com/VanshajPoonia/proof-of-grass)' } });
     if (!res.ok) throw new Error(`${res.status} fetching ${f.title}`);
     writeFileSync(local, Buffer.from(await res.arrayBuffer()));
   }
-  cache[f.title] = await embedImage(fileURLToPath(local), MODEL);
+  return fileURLToPath(local);
+}
+async function embedOnce(key, image) {
+  if (cache[key]) return;
+  cache[key] = await embedImage(await image(), MODEL);
   process.stdout.write('.');
 }
-writeFileSync(cacheFile, JSON.stringify(cache));
 
+for (const f of [...FIXTURES, ...SCREENS]) await embedOnce(f.title, () => download(f));
 const positives = FIXTURES.filter((f) => !f.label.startsWith('none'));
 const negatives = FIXTURES.filter((f) => f.label.startsWith('none'));
 
+// Every outdoor photo, pasted onto the screen of every device photo.
+const onScreens = [];
+for (const fr of FRAMES) {
+  const frame = await RawImage.read(await download(fr));
+  for (const f of positives) {
+    const key = `screen|${fr.title}|${f.title}`;
+    await embedOnce(key, async () => onScreen(frame, await RawImage.read(await download(f)), fr.rect));
+    onScreens.push({ key, label: f.label, device: fr.device, frame: fr.title });
+  }
+}
+writeFileSync(cacheFile, JSON.stringify(cache));
+
 // ---- strategies ---------------------------------------------------------------------
 const classesFor = ({ templates, withElsewhere }) => buildClasses(ITEMS, { model: MODEL, templates, extra: withElsewhere ? ELSEWHERE : [] });
+const NO_SCREEN_CHECK = { screenK: 0 };
 
 function score(decide) {
   let right = 0, wrongSquare = 0, indoor = 0;
@@ -79,24 +101,52 @@ row('softmax over outdoor items, top-1', score((vec, id) => judge(rank(vec, item
 
 // 3. Give non-outdoor photos somewhere to go.
 const withElse1 = await classesFor({ templates: ['a photo of {}.'], withElsewhere: true });
-row('+ "elsewhere" classes, top-1', score((vec, id) => judge(rank(vec, withElse1), id, { topK: 1, minP: 0 }).ok));
+row('+ "elsewhere" classes, top-1', score((vec, id) => judge(rank(vec, withElse1), id, { topK: 1, minP: 0, ...NO_SCREEN_CHECK }).ok));
 
 // 4. Prompt ensembling.
-const shipped = await buildBingo();
-row('+ prompt ensemble, top-1', score((vec, id) => judge(rank(vec, shipped), id, { topK: 1, minP: 0 }).ok));
+const ensemble = await classesFor({ templates: TEMPLATES, withElsewhere: true });
+row('+ prompt ensemble, top-1', score((vec, id) => judge(rank(vec, ensemble), id, { topK: 1, minP: 0, ...NO_SCREEN_CHECK }).ok));
 
-// 5. What ships: top-2 with a probability floor, so a photo can honestly fill two squares.
-const final = score((vec, id) => judge(rank(vec, shipped), id, DEFAULTS).ok);
-row(`+ top-${DEFAULTS.topK}, p >= ${DEFAULTS.minP}  (shipped)`, final);
+// 5. Top-2 with a probability floor, so a photo can honestly fill two squares.
+const before = (vec, id) => judge(rank(vec, ensemble), id, NO_SCREEN_CHECK).ok;
+row(`+ top-${DEFAULTS.topK}, p >= ${DEFAULTS.minP}`, score(before));
+
+// 6. What ships: a "photo on a screen" class, and the screen check.
+const shipped = await buildBingo();
+const now = (vec, id) => judge(rank(vec, shipped), id).ok;
+const final = score(now);
+row(`+ screen check  (shipped)`, final);
 
 console.log('\nmissed:', final.misses.length ? '\n  ' + final.misses.join('\n  ') : 'none');
 console.log('indoor leaks:', final.leaks.length ? '\n  ' + final.leaks.join('\n  ') : 'none');
 console.log('extra squares:', final.extras.length ? '\n  ' + final.extras.join('\n  ') : 'none');
 
+// ---- photos of screens ------------------------------------------------------------------
+const ticks = (decide, vec) => ITEMS.some((it) => decide(vec, it.id));
+const screenRow = (name, decide) => {
+  const real = SCREENS.filter((f) => ticks(decide, cache[f.title])).length;
+  const own = onScreens.filter((c) => decide(cache[c.key], c.label)).length;
+  console.log(`${name.padEnd(28)} ${String(real).padStart(2)}/${SCREENS.length} real screen photos tick a square   ` +
+    `${String(own).padStart(4)}/${onScreens.length} outdoor photos on a screen fill their own square`);
+  return { real, own };
+};
+console.log(`\nphotos of screens: ${SCREENS.length} from Commons, and ${positives.length} outdoor photos pasted onto ${FRAMES.length} device photos\n`);
+const was = screenRow('before the screen check', before);
+const is = screenRow('with the screen check', now);
+console.log('\nby device photo (outdoor photos on it that still fill their square, before -> after):');
+for (const fr of FRAMES) {
+  const mine = onScreens.filter((c) => c.frame === fr.title);
+  const n = (d) => mine.filter((c) => d(cache[c.key], c.label)).length;
+  console.log(`  ${fr.device.padEnd(12)} ${String(n(before)).padStart(3)} -> ${String(n(now)).padStart(3)} of ${mine.length}   ${fr.title}`);
+}
+// The screen class and its 5% were picked looking at the 1st, 3rd, 5th... device photos only.
+const half = (odd) => onScreens.filter((c) => FRAMES.findIndex((f) => f.title === c.frame) % 2 === odd && now(cache[c.key], c.label)).length;
+console.log(`\npicked on half the device photos: ${half(0)}/${onScreens.length / 2} got through. held out: ${half(1)}/${onScreens.length / 2}`);
+
 // ---- the shipped data file must be what we just measured ----------------------------
 let stale = 'missing';
 if (existsSync(here('../data/classes.json'))) {
-  const disk = JSON.parse(readFileSync(here('../data/classes.json')));
+  const disk = json('../data/classes.json');
   const same = disk.model === MODEL && disk.classes.length === shipped.length &&
     disk.classes.every((c, i) => c.id === shipped[i].id && c.vec.reduce((s, x, j) => s + x * shipped[i].vec[j], 0) > 0.9999);
   stale = same ? '' : 'out of date';
@@ -105,7 +155,7 @@ if (MODEL === 'Xenova/clip-vit-base-patch32') {
   console.log(`\ndata/classes.json: ${stale || 'matches'}`);
 }
 
-const pass = final.indoor === 0 && final.right / positives.length >= 0.9 &&
-  (MODEL !== 'Xenova/clip-vit-base-patch32' || !stale);
+const pass = final.indoor === 0 && final.right / positives.length >= 0.9 && is.real === 0 &&
+  is.own < was.own / 4 && (MODEL !== 'Xenova/clip-vit-base-patch32' || !stale);
 console.log(pass ? '\nPASS' : '\nFAIL');
 process.exit(pass ? 0 : 1);

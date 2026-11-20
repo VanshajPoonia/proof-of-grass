@@ -6,7 +6,7 @@ import {
   AutoProcessor, CLIPVisionModelWithProjection, RawImage,
 } from '@huggingface/transformers';
 import { classPrompts, centroid } from './core.js';
-import { TEMPLATES, ELSEWHERE } from './vocab.js';
+import { TEMPLATES, ELSEWHERE, SCREEN } from './vocab.js';
 
 export const DEFAULT_MODEL = 'Xenova/clip-vit-base-patch32';
 export { RawImage };
@@ -45,11 +45,31 @@ export async function embedImage(image, model = DEFAULT_MODEL, dtype = 'q8') {
   return image_embeds.tolist()[0];
 }
 
+const asImage = async (x) => (x instanceof RawImage ? x : await RawImage.read(x)).rgb();
+
+/**
+ * A photo shown on a device: `photo` cropped to fill `rect` ([x0, y0, x1, y1]) inside
+ * `frame`, a real photo of a screen. This is how the tests fake "a phone showing grass".
+ */
+export async function onScreen(frame, photo, [x0, y0, x1, y1]) {
+  const [f, p] = await Promise.all([asImage(frame), asImage(photo)]);
+  const w = x1 - x0, h = y1 - y0;
+  const s = Math.min(p.width / w, p.height / h);
+  const cw = Math.floor(w * s), ch = Math.floor(h * s);
+  const cx = Math.floor((p.width - cw) / 2), cy = Math.floor((p.height - ch) / 2);
+  const fit = await (await p.crop([cx, cy, cx + cw - 1, cy + ch - 1])).resize(w, h);
+  const data = new Uint8ClampedArray(f.data);
+  for (let y = 0; y < h; y++) {
+    data.set(fit.data.subarray(y * w * 3, (y + 1) * w * 3), ((y0 + y) * f.width + x0) * 3);
+  }
+  return new RawImage(data, f.width, f.height, 3);
+}
+
 /**
  * One direction per class. `items` are your own classes ({ id, names }); the shared
- * indoor classes are added after them unless you pass `extra`.
+ * elsewhere and screen classes are added after them unless you pass `extra`.
  */
-export async function buildClasses(items, { model = DEFAULT_MODEL, templates = TEMPLATES, extra = ELSEWHERE } = {}) {
+export async function buildClasses(items, { model = DEFAULT_MODEL, templates = TEMPLATES, extra = [...ELSEWHERE, ...SCREEN] } = {}) {
   const all = [...items.map((c) => ({ kind: 'item', ...c })), ...extra];
   const classes = [];
   for (const c of all) classes.push({ id: c.id, kind: c.kind, vec: centroid(await embedTexts(classPrompts(c, templates), model)) });
