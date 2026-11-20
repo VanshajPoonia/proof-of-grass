@@ -3,7 +3,8 @@
 //
 // `names` are what CLIP is asked about. Several phrasings per item, because CLIP was
 // trained on alt-text, and "a pine cone" and "pinecones on the ground" land in
-// different places. They get averaged into one direction per item (src/judge.js).
+// different places. They get averaged into one direction per item (judge/core.js).
+// The indoor and screen classes every vocabulary gets are in judge/vocab.js.
 export const ITEMS = [
   { id: 'grass', emoji: '🌱', label: 'Grass', hint: 'The whole point. Actual blades, please.', names: ['grass', 'blades of grass', 'a lawn', 'a grassy field'] },
   { id: 'fallen-leaf', emoji: '🍂', label: 'A fallen leaf', hint: 'October is doing most of the work here.', names: ['a fallen leaf', 'autumn leaves on the ground', 'dry leaves'] },
@@ -30,31 +31,6 @@ export const ITEMS = [
   { id: 'stump', emoji: '🪵', label: 'A tree stump', hint: 'Count the rings if you have the patience.', names: ['a tree stump', 'a cut tree stump showing rings'] },
   { id: 'snail', emoji: '🐌', label: 'A snail', hint: 'After rain. Mind your step.', names: ['a snail', 'a garden snail'] },
   { id: 'butterfly', emoji: '🦋', label: 'A butterfly', hint: 'Late in the season, but you might get lucky.', names: ['a butterfly', 'a butterfly on a flower'] },
-];
-
-// Things a photo might be instead. They are never squares on the card. They exist so
-// that a photo of a desk has somewhere to go other than "probably moss". Without them
-// the softmax has to spend its probability on *some* outdoor item, and does.
-export const ELSEWHERE = [
-  { id: 'screen', names: ['a computer screen', 'a laptop', 'a phone screen', 'a television', 'a photo of a monitor'] },
-  { id: 'keyboard', names: ['a keyboard', 'a computer desk'] },
-  { id: 'room', names: ['a bedroom', 'a living room', 'a room indoors', 'a kitchen'] },
-  { id: 'wall', names: ['a wall indoors', 'a ceiling', 'a carpet', 'a painting on a wall'] },
-  { id: 'food', names: ['food on a plate', 'a meal', 'fruit in a bowl'] },
-  { id: 'face', names: ['a selfie', "a person's face", 'a portrait'] },
-  { id: 'car', names: ['the inside of a car', 'a steering wheel', 'a dashboard'] },
-  { id: 'houseplant', names: ['a houseplant in a pot', 'a potted plant indoors'] },
-  { id: 'paper', names: ['a document', 'a page of text', 'a book'] },
-];
-
-// CLIP prompt ensembling, as in the original paper. Averaging over a few templates
-// is a small, reliable win, and "taken on a phone" matters because that is literally
-// where the photos come from.
-export const TEMPLATES = [
-  'a photo of {}.',
-  'a close-up photo of {}.',
-  'a photo of {} taken on a phone.',
-  'a blurry photo of {}.',
 ];
 
 export const CENTER = 'grass';

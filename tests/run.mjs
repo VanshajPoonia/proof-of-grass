@@ -7,10 +7,11 @@
 // Photos are downloaded on first run into tests/.cache (credits in tests/fixtures.json).
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { ITEMS, ELSEWHERE, TEMPLATES } from '../src/items.js';
-import { rank, judge, DEFAULTS, classPrompts, centroid } from '../src/judge.js';
-import { embedImage, embedTexts, MODEL } from './clip-node.mjs';
-import { buildClasses } from '../scripts/build-classes.mjs';
+import { ITEMS } from '../src/items.js';
+import { ELSEWHERE, TEMPLATES } from '../judge/vocab.js';
+import { rank, judge, DEFAULTS } from '../judge/core.js';
+import { embedImage, buildClasses } from '../judge/node.mjs';
+import { buildBingo, MODEL } from '../scripts/build-classes.mjs';
 
 const here = (p) => new URL(p, import.meta.url);
 const FIXTURES = JSON.parse(readFileSync(here('./fixtures.json')));
@@ -28,7 +29,7 @@ for (const f of FIXTURES) {
     if (!res.ok) throw new Error(`${res.status} fetching ${f.title}`);
     writeFileSync(local, Buffer.from(await res.arrayBuffer()));
   }
-  cache[f.title] = await embedImage(fileURLToPath(local));
+  cache[f.title] = await embedImage(fileURLToPath(local), MODEL);
   process.stdout.write('.');
 }
 writeFileSync(cacheFile, JSON.stringify(cache));
@@ -37,15 +38,7 @@ const positives = FIXTURES.filter((f) => !f.label.startsWith('none'));
 const negatives = FIXTURES.filter((f) => f.label.startsWith('none'));
 
 // ---- strategies ---------------------------------------------------------------------
-async function classesFor({ templates, withElsewhere }) {
-  const src = [
-    ...ITEMS.map((c) => ({ ...c, kind: 'item' })),
-    ...(withElsewhere ? ELSEWHERE.map((c) => ({ ...c, kind: 'elsewhere' })) : []),
-  ];
-  const out = [];
-  for (const c of src) out.push({ id: c.id, kind: c.kind, vec: centroid(await embedTexts(classPrompts(c, templates))) });
-  return out;
-}
+const classesFor = ({ templates, withElsewhere }) => buildClasses(ITEMS, { model: MODEL, templates, extra: withElsewhere ? ELSEWHERE : [] });
 
 function score(decide) {
   let right = 0, wrongSquare = 0, indoor = 0;
@@ -89,7 +82,7 @@ const withElse1 = await classesFor({ templates: ['a photo of {}.'], withElsewher
 row('+ "elsewhere" classes, top-1', score((vec, id) => judge(rank(vec, withElse1), id, { topK: 1, minP: 0 }).ok));
 
 // 4. Prompt ensembling.
-const shipped = await buildClasses(TEMPLATES);
+const shipped = await buildBingo();
 row('+ prompt ensemble, top-1', score((vec, id) => judge(rank(vec, shipped), id, { topK: 1, minP: 0 }).ok));
 
 // 5. What ships: top-2 with a probability floor, so a photo can honestly fill two squares.

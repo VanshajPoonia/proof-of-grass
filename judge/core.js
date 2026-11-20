@@ -1,5 +1,7 @@
-// Pure scoring logic, shared by the app and by tests/run.mjs. No model in here: it takes
-// embeddings in and returns a verdict, so the test suite exercises exactly this file.
+// The TouchGrass judge, pure half. Embeddings in, a verdict out. No model and no DOM,
+// so the browser, Node and the tests all run exactly this file. See README.md here.
+
+export const VERSION = '1.0.0';
 
 /** Every phrasing of every class, expanded through every template. */
 export function classPrompts(cls, templates) {
@@ -49,24 +51,23 @@ export function rank(imageVec, classes, scale = 100) {
 export const DEFAULTS = { topK: 2, minP: 0.15 };
 
 /**
- * Does this photo fill this square?
+ * Does this photo show the claim? `claim` is one class id, or a list of ids that would
+ * all count (a memorial can be a statue or a plaque).
  *
- * Accept when the claimed item is in the top `topK` and holds at least `minP` of the
+ * Accept when a claimed class is in the top `topK` and holds at least `minP` of the
  * probability. Top-2 rather than top-1 because real photos contain more than one
  * thing: a squirrel holding an acorn should be able to fill either square. The
  * `minP` floor stops the runner-up from sneaking in at 3%.
  *
- * Anything that is not an outdoor item outranking the claim is a hard no, regardless.
+ * An indoor class on top is a hard no ('elsewhere'), whatever the claim.
  */
-export function judge(ranked, claimId, { topK, minP } = DEFAULTS) {
-  const at = ranked.findIndex((r) => r.id === claimId);
+export function judge(ranked, claim, options = {}) {
+  const { topK, minP } = { ...DEFAULTS, ...options };
+  const ids = new Set([claim].flat());
+  const at = ranked.findIndex((r) => ids.has(r.id));
   const hit = ranked[at];
   const top = ranked[0];
-  if (top.kind === 'elsewhere') {
-    return { ok: false, reason: 'elsewhere', top, hit };
-  }
-  if (at >= 0 && at < topK && hit.p >= minP) {
-    return { ok: true, reason: 'match', top, hit };
-  }
+  if (top.kind === 'elsewhere') return { ok: false, reason: 'elsewhere', top, hit };
+  if (at >= 0 && at < topK && hit.p >= minP) return { ok: true, reason: 'match', top, hit };
   return { ok: false, reason: 'other-item', top, hit };
 }

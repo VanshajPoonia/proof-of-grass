@@ -1,7 +1,9 @@
-import { ITEMS, CENTER, ELSEWHERE } from './items.js';
+import { ITEMS, CENTER } from './items.js';
 import { cardFor, completedLines, dayKey, shareText, streak } from './card.js';
-import { rank, judge } from './judge.js';
-import * as clip from './clip.js';
+import { ELSEWHERE } from '../judge/vocab.js';
+import { createJudge } from '../judge/browser.js';
+
+const clip = createJudge({ vocabulary: 'data/classes.json' });
 
 const $ = (s) => document.querySelector(s);
 const byId = Object.fromEntries(ITEMS.map((i) => [i.id, i]));
@@ -182,8 +184,8 @@ async function check(blob, credit = '') {
     await ensureModel($('#verdict'));
     $('#verdict .load-label').textContent = '';
     $('#verdict h3').textContent = 'Looking closely…';
-    const ranked = rank(await clip.embed(blob), clip.getClasses());
-    const v = judge(ranked, id);
+    const v = await clip.check(blob, id);
+    const { ranked } = v;
     const top3 = ranked.slice(0, 3).map((r) => ({ name: nameOf(r), p: r.p, id: r.id }));
     if (v.ok) {
       state.filled[i] = { thumb, top3 };

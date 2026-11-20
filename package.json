@@ -7,7 +7,7 @@
   "scripts": {
     "start": "python3 -m http.server 8000",
     "build": "node scripts/build-classes.mjs",
-    "test": "node tests/card.mjs && node tests/run.mjs"
+    "test": "node tests/card.mjs && node tests/judge.mjs && node tests/run.mjs"
   },
   "devDependencies": {
     "@huggingface/transformers": "^4.3.1"

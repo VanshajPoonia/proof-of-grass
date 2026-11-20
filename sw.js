@@ -4,11 +4,12 @@
 // ONNX runtime in its own Cache Storage, so after one online visit the whole judge
 // runs in airplane mode. Everything else (the library from jsDelivr, the sample
 // photos) is cached the first time it is fetched.
-const SHELL = 'pog-shell-v1';
+const SHELL = 'pog-shell-v2';
 const RUNTIME = 'pog-runtime-v1';
 const FILES = [
   './', 'index.html', 'assets/styles.css', 'manifest.webmanifest',
-  'src/app.js', 'src/card.js', 'src/clip.js', 'src/items.js', 'src/judge.js',
+  'src/app.js', 'src/card.js', 'src/items.js',
+  'judge/core.js', 'judge/browser.js', 'judge/vocab.js',
   'data/classes.json',
 ];
 
